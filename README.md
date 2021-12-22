@@ -1,5 +1,5 @@
 # Description
-This is a simple userland rootkit that simple hooks the strcpy function and tries to send it to a server.
+This is a simple userland rootkit that simple hooks the strcpy and strcmp functions and tries to send it to a server.
 
 ## Compilation
 
@@ -17,7 +17,7 @@ gcc main.c
 
 Simple netcat server for testing:
 ```
-nc -l -p 8080
+ncat -k -l -p 8080
 ```
 
 Then simply run the following command to use rootkit:

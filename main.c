@@ -10,4 +10,9 @@ int main(){
     char *destination;
     printf("Original: %s\n", strcpy(destination, source));
     printf("Destination: %s\n", destination);
+
+    if (strcmp(source, "somebadpassword") == 0) 
+        printf("Correct!");
+    else
+        printf("Wrong!");
 }
