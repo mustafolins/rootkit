@@ -1,5 +1,5 @@
 # Description
-This is a simple userland rootkit that simple hooks the strcpy and strcmp functions and tries to send it to a server.
+This is a simple userland rootkit that simple hooks the `strcpy`, `strcmp`, `puts`, `putch`, and `printf` functions and tries to send it to a server.
 
 ## Compilation
 

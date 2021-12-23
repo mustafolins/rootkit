@@ -15,4 +15,11 @@ int main(){
         printf("Correct!");
     else
         printf("Wrong!");
+
+    putchar('z');
+    putchar('o');
+    putchar('o');
+    putchar('\n');
+
+    puts("test\n");
 }
