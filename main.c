@@ -22,4 +22,7 @@ int main(){
     putchar('\n');
 
     puts("test\n");
+
+    int num = 33;
+    printf("%s %i\n", "integer", num);
 }
