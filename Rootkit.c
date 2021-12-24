@@ -112,71 +112,71 @@ int puts(const char *str){
 }
 
 int printf(const char *format, ...){
-    // copy original printf
-    int (*func)(const char *format, ...) = 
-        dlsym(
-            dlopen(LIBC, RTLD_NOW),
-            "printf");
-
     // send
     sendData("Format: ", 0);
     sendData(format, 1);
 
-    // get count of arguments in printf and argument types
-    int count = 0;
-    char* types = malloc(strlen(format));
-    char ch = format[count];
-    for (int i = 0; ch != '\0'; i++) {
-        if(format[i] == '%'){
-            types[count++] = format[i + 1];
-            types[count] = '\0';
-        }
-        ch = format[i];
-    }
-    
-    sendData(types, 1);
+    int result = 0;
 
     va_list arg;
     va_start(arg, format);
 
-    // call orginal function
-    int result = func(format, arg);
+    // get count of arguments in printf and argument types
+    int count = 0;
+    char* types = malloc(strlen(format));
+    for (int i = 0; format[i] != '\0'; i++) {
+        if(format[i] == '%'){
+            result += processprintfarg(format[++i], arg);
 
-    // process arguments
-    processprintfargs(types, count, arg);
+            types[count++] = format[i];
+            types[count] = '\0';
+            continue;
+        }
+        putchar(format[i]);
+        result++;
+    }
 
     va_end(arg);
 
     return result;
 }
 
-void processprintfargs(char *types, int count, va_list arg){
-    // iterate through arguments
-    for (int i = 0; i < count; i++) {
-        sendData("\n\tArgument --- ", 0);
-        switch (types[i]) {
-            case 'i':
-                sendData("\n\tinterger: \t", 0);
+int processprintfarg(char type, va_list arg){
+    int size = 0;
+    // proccess argument
+    sendData("\n\tArgument --- ", 0);
+    switch (type) {
+        case 'i':
+            sendData("\n\tinterger: \t", 0);
 
-                char* tempStr = malloc(1024);
-                int tempInt = 0;
-                // get int arguemetn
-                tempInt = va_arg(arg, int);
-                
-                // create string from integer
-                sprintf(tempStr, "%i", tempInt);
+            char* tempIntStr = malloc(1024);
+            int tempInt = 0;
+            // get int arguemetn
+            tempInt = va_arg(arg, int);
+            
+            // create string from integer
+            sprintf(tempIntStr, "%i", tempInt);
 
-                // print to standard out
-                puts(tempStr);
+            // print to standard out
+            puts(tempIntStr);
 
-                free(tempStr);
-                break;
-            case 's':
-                sendData("\n\tstring: \t", 0);
-                puts(va_arg(arg, const char*));
-                break;
-            default:
-                break;
-        }
+            size = strlen(tempIntStr);
+
+            free(tempIntStr);
+            break;
+        case 's':
+            sendData("\n\tstring: \t", 0);
+            char* tempStr;
+            // get string argument
+            tempStr = va_arg(arg, char*);
+
+            // print to standard out
+            puts(tempStr);
+
+            size = strlen(tempStr);
+            break;
+        default:
+            return size;
     }
+    return size;
 }
